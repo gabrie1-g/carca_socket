@@ -36,4 +36,3 @@ class CarcaServer():
                 self._socket.sendto(confirm_packet, client_address)
             if client_packet._FIN == 1: 
                 return self._byte_list
-                break

@@ -33,11 +33,7 @@ class CarcaClient():
             if server_packet._ack_number > self._send_base:
                 self._send_base = server_packet._ack_number
                 i += 1
-            #packet = CarcaPacket(seq_number=server_packet._ack_number, ack_number=server_packet._seq_number + 1, payload=segments_list[i])
+            packet = CarcaPacket(seq_number=server_packet._ack_number, ack_number=server_packet._seq_number + 1, payload=segments_list[i])
             if i == len(segments_list) - 1:
-                packet = CarcaPacket(seq_number=server_packet._ack_number, FIN=1, 
-                                    ack_number=server_packet._seq_number + 1, payload=segments_list[i])
-            else:
-                 packet = CarcaPacket(seq_number=server_packet._ack_number, 
-                                    ack_number=server_packet._seq_number + 1, payload=segments_list[i])
+                packet._FIN = 1
             self._socket.sendto(packet, server_address)          

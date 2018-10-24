@@ -3,7 +3,7 @@ from carca_socket import CarcaSocket
 
 
 def main():
-    data = "abcdefghijlmnopqrstuvxz"
+    data = "Isso foi mais complicado do que eu pensei carajo"
     server_address = ('localhost', 6000)
     socket = CarcaSocket()
     client = CarcaClient(socket, data)
