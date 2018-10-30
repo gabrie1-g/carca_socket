@@ -23,9 +23,7 @@ class CarcaClient():
         self._socket.bind(client_address)
         
     def resend_packet(self):
-        thread = Thread(target = self.verify)
         self._socket.sendto(self._last_sent, self._server_address)
-        thread.start()
             
     def verify(self):
         global flag
@@ -36,15 +34,16 @@ class CarcaClient():
             end = time()
             if flag: break
         if flag == False: 
-          print('haha timeout')
-          self.resend_packet()
+            thread = Thread(target = self.resend_packet())
+            thread.start()
+            thread.join()
         
     def send_segment(self):
         global flag
         byte_string = utils.serialize_to_string(self._data)
         segments_list = utils.string_to_segments(byte_string, self._mss)
 
-        _last_sent = packet = CarcaPacket(seq_number=1, ack_number=0, payload=segments_list[0])
+        self._last_sent = packet = CarcaPacket(seq_number=1, ack_number=0, payload=segments_list[0])
         self._send_base = packet._seq_number
         thread = Thread(target = self.verify)        
         self._socket.sendto(packet, self._server_address)
@@ -52,19 +51,17 @@ class CarcaClient():
         i = 0
         while i < len(segments_list):
             server_packet, _ = self._socket.recvfrom(4096)
-            if thread.is_alive(): flag = True
-
+            if thread.is_alive(): 
+                if flag == False: flag = True
+            if server_packet._FIN == 1: break
             if server_packet._ack_number > self._send_base:
                 self._send_base = server_packet._ack_number
                 i += 1
-            if i == len(segments_list): 
-                print(i)
-                break
-            packet = CarcaPacket(seq_number=server_packet._ack_number, ack_number=server_packet._seq_number + 1,      payload=segments_list[i])
+            self._last_sent = packet = CarcaPacket(seq_number=server_packet._ack_number, 
+                                                    ack_number=server_packet._seq_number + 1,      payload=segments_list[i])
             if i == len(segments_list) - 1:
                 packet._FIN = 1
             thread = Thread(target = self.verify)
-            self._socket.sendto(packet, self._server_address)
             flag = False
-            thread.start()
-                      
+            self._socket.sendto(packet, self._server_address)
+            thread.start()                      
