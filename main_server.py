@@ -8,10 +8,8 @@ def main():
     socket = CarcaSocket()
     server = CarcaServer(socket, data)
     server.listen(server_address)
-    encoded_data = server.receive_data()
-    encoded_data = utils.string_from_segments(encoded_data)
-    encoded_data = utils.parse_from_string(encoded_data)
-    print(encoded_data)
+    server.receive_data()
+
     
 if __name__ == '__main__':
     main()

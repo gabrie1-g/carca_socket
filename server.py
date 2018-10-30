@@ -28,11 +28,19 @@ class CarcaServer():
                 
                 confirm_packet = CarcaPacket(seq_number=client_packet._ack_number,
                                      ack_number=client_packet._seq_number + client_packet._mss)
-
+                sleep(1)
                 self._socket.sendto(confirm_packet, client_address)
             else:
                 confirm_packet = CarcaPacket(seq_number=self._last_packet_received._ack_number,
                                      ack_number=self._last_packet_received._seq_number + client_packet._mss)
                 self._socket.sendto(confirm_packet, client_address)
-            if client_packet._FIN == 1: 
-                return self._byte_list
+            if client_packet._FIN == 1:
+                self.show_data() 
+                pass
+                
+                
+    def show_data(self):
+      encoded_data = self._byte_list
+      encoded_data = utils.string_from_segments(encoded_data)
+      decoded_data = utils.parse_from_string(encoded_data)
+      print(decoded_data)
