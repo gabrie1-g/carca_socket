@@ -12,18 +12,16 @@ window_state = None
 current_window = None
 ws_lock = Lock()
 aux = False
-segments_list = []       
+segments_list = []
+thread_id = {}
 
 class CarcaClient():
     def __init__(self, carca_socket, data, server_address, mss=2):
         self._socket = carca_socket
-        self._last_byte_read = 0
         self._send_base = 0
         self._data = data
-        self._last_sent = None
         self._mss = mss
         self._byte_list = []
-        self._window_backup = {}
         self._server_address = server_address
         self._cwnd = 4 * mss
         self.window_setup_ini()
@@ -44,21 +42,21 @@ class CarcaClient():
         self._socket.bind(client_address)
         
     def resend_packet(self, packet):
-        #self._socket.sendto(self._last_sent, self._server_address)
         self._socket.sendto(packet, self._server_address)
         
     def send_packet(self):
+        global thread_id
         global index
         global window_state       
         ws_lock.acquire()
         if index == 0:
             packet = CarcaPacket(seq_number=1)
             packet._payload = segments_list[index]
-            self._window_backup[str(packet._seq_number)] = packet
             index += 1
             window_state -= self._mss
             self._send_base = packet._seq_number
             timeout_verifier = Thread(target=self.verify, args=(packet,))
+            thread_id[packet._seq_number] = False
             self._socket.sendto(packet, self._server_address)
             timeout_verifier.start()
             timeout_verifier.join()
@@ -67,11 +65,11 @@ class CarcaClient():
             if index == len(segments_list) - 1:
                 packet._FIN = 1
             packet._payload = segments_list[index]
-            self._window_backup[str(packet._seq_number)] = packet
             index += 1
             window_state -= self._mss
             self._send_base = packet._seq_number
             timeout_verifier = Thread(target=self.verify, args=(packet,))
+            thread_id[packet._seq_number] = False
             self._socket.sendto(packet, self._server_address)
             timeout_verifier.start()
             timeout_verifier.join()
@@ -79,11 +77,15 @@ class CarcaClient():
         
             
     def process_ack(self, packet):
+        global thread_id
         global window_state
         global current_window
         ws_lock.acquire()
         if packet._ack_number - self._mss > current_window[0] and packet._ack_number - self._mss < current_window[1]:
-            del self._window_backup[str(packet._ack_number - self._mss)]
+            for key, val in thread_id:
+              if packet._ack_number - self._mss >= val:
+                thread_id[key] = True
+                
             current_window[0] += self._mss
             current_window[1] += self._mss
             window_state += self._mss
@@ -92,15 +94,17 @@ class CarcaClient():
     def verify(self, packet):
         global flag
         global timeout
+        global thread_id
         start = time()
         end = time()
         while end - start < timeout:
             end = time()
-            if flag: break
-        if flag == False: 
+            if thread_id[packet._seq_number]: break
+        if thread_id[packet._seq_number] == False: 
             thread = Thread(target = self.resend_packet, args=(packet,))
             thread.start()
             #thread.join()
+        del thread_id[packet._seq_number]
             
             
     def send_segment(self):
