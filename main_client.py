@@ -3,7 +3,9 @@ from carca_socket import CarcaSocket
 
 
 def main():
-    data = "abcdefghijlmnopqrstuvxz"
+    data = []
+    for i in range(0, 1000):
+      data.append(i)
     server_address = ('localhost', 6000)
     socket = CarcaSocket()
     client = CarcaClient(socket, data, server_address)
